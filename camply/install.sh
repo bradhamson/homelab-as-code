@@ -1,3 +1,7 @@
+## -----------------------------------------------------------------------------
+# Install Camply
+## -----------------------------------------------------------------------------
+
 apt update && apt upgrade -y
 apt install sudo python3-pip python3-venv -y
 
@@ -42,3 +46,49 @@ APPRISE_URL=""
 RIDB_API_KEY=""
 EOF
 
+## -----------------------------------------------------------------------------
+# Install crontab-ui
+## -----------------------------------------------------------------------------
+mkdir /home/camply/crontab-ui
+mkdir /home/camply/crontab-ui/db
+openssl rand -base64 32 > /home/camply/crontab-ui/.crontab-ui-auth
+
+# create crontab-ui startup shell script
+cat <<EOF >/home/camply/crontab-ui/start.sh
+#!/bin/bash
+
+HOST=0.0.0.0 \
+PORT=5000 \
+CRON_DB_PATH=/home/camply/crontab-ui/db \
+ENABLE_AUTO_SAVE=true BASIC_AUTH_USER=camply \
+BASIC_AUTH_PWD=$(cat /home/camply/crontab-ui/.crontab-ui-auth) \
+crontab-ui
+EOF
+
+chown camply:camply -R /home/camply/crontab-ui
+chmod +x /home/camply/crontab-ui/start.sh
+
+su - root
+
+apt install nodejs npm git -y
+npm install crontab-ui
+
+# create crontab-ui service file
+cat <<EOF >/etc/systemd/system/crontab-ui.service
+[Unit]
+Description=Crontab UI
+After=network.target
+
+[Service]
+Type=simple
+User=camply
+WorkingDirectory=/home/camply/crontab-ui
+ExecStart=/home/camply/crontab-ui/start.sh
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+systemctl enable crontab-ui.service
+systemctl start crontab-ui.service
