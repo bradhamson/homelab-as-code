@@ -51,7 +51,7 @@ create_ct() {
     # placeholders
     declare ct_ip_address
     declare gateway_ip_address
-    clone "homeassistant"
+    clone "mariadb"
     configure_network $ct_ip_address $gateway_ip_address
     install_system_tools
 }
